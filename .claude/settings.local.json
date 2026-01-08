@@ -3,7 +3,16 @@
     "allow": [
       "Bash(gradlew.bat build:*)",
       "Bash(powershell -Command \"./gradlew.bat build\")",
-      "WebSearch"
+      "WebSearch",
+      "Bash(mkdir:*)",
+      "Bash(./gradlew.bat:*)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "deepwiki",
+    "maven-deps-server",
+    "github",
+    "context7",
+    "playwright"
+  ]
 }

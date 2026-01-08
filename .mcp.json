@@ -1,0 +1,20 @@
+{
+  "mcpServers" : {
+    "deepwiki" : {
+      "type" : "sse",
+      "url" : "https://mcp.deepwiki.com/sse"
+    },
+    "maven-deps-server" : {
+      "command" : "C:\\Program Files\\nodejs\\npx.cmd",
+      "args" : [ "mcp-maven-deps" ]
+    },
+    "context7": {
+      "command": "C:\\Program Files\\nodejs\\npx.cmd",
+      "args": ["@upstash/context7-mcp"]
+    },
+    "playwright": {
+      "command": "C:\\Program Files\\nodejs\\npx.cmd",
+      "args": ["@playwright/mcp@latest"]
+    }
+  }
+}

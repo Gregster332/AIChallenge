@@ -14,126 +14,121 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-### Build the project
+### Windows (используй эти команды)
+```bash
+gradlew.bat build
+gradlew.bat assembleDebug
+gradlew.bat assembleRelease
+gradlew.bat clean build
+gradlew.bat installDebug
+gradlew.bat lint
+gradlew.bat lintDebug
+```
+
+### Unix/macOS
 ```bash
 ./gradlew build
-```
-
-### Build debug APK
-```bash
 ./gradlew assembleDebug
-```
-
-### Build release APK
-```bash
 ./gradlew assembleRelease
-```
-
-### Clean build
-```bash
 ./gradlew clean build
-```
-
-### Install debug build on connected device/emulator
-```bash
 ./gradlew installDebug
-```
-
-## Testing
-
-### Run all unit tests
-```bash
-./gradlew test
-```
-
-### Run unit tests for debug variant
-```bash
-./gradlew testDebugUnitTest
-```
-
-### Run all instrumented tests (requires connected device/emulator)
-```bash
-./gradlew connectedAndroidTest
-```
-
-### Run instrumented tests for debug
-```bash
-./gradlew connectedDebugAndroidTest
-```
-
-### Run a specific test class
-```bash
-./gradlew test --tests "com.gregzenkov.aichallenge.ExampleUnitTest"
-```
-
-### Run tests with coverage
-```bash
-./gradlew testDebugUnitTest jacocoTestReport
-```
-
-## Code Quality
-
-### Check for lint issues
-```bash
 ./gradlew lint
-```
-
-### Generate lint report
-```bash
 ./gradlew lintDebug
 ```
 
 ## Architecture
 
-### Project Structure
-- **Single Activity Architecture**: MainActivity is the single entry point
-- **Jetpack Compose**: 100% Compose UI (no XML layouts)
-- **Material 3**: Using Material Design 3 components
-- **Edge-to-Edge**: App uses edge-to-edge display mode
+### Multi-Module Architecture
+Проект использует модульную архитектуру с разделением на фичи:
+- **app** - главный модуль приложения (application module)
+- **features:*** - feature-модули (library modules), каждый представляет отдельную фичу
+- **build-logic** - convention plugins для единообразной конфигурации модулей
 
-### Source Organization
+### Navigation & State Management (Decompose)
+Проект использует **Decompose** (v3.2.0) - библиотеку для управления навигацией и состоянием компонентов:
+
+- **RootComponent** (`app/component/RootComponent.kt`) - корневой компонент навигации
+  - Управляет стеком навигации через `ChildStack`
+  - Использует `kotlinx-serialization` для сериализации конфигурации навигации
+  - Определяет sealed interface `Config` для типизированной навигации
+
+- **Feature Components** - каждая фича имеет свой компонент (например, `HomeComponent`)
+  - Интерфейс компонента находится в `api` пакете (публичный API фичи)
+  - Реализация компонента находится в `internal` пакете (приватная реализация)
+  - Factory method в companion object для создания компонента
+
+### Feature Module Structure
+Каждый feature-модуль организован следующим образом:
 ```
-app/src/main/java/com/gregzenkov/aichallenge/
-├── MainActivity.kt          # Single activity, entry point
-└── ui/
-    └── theme/              # Compose theme configuration
-        ├── Color.kt
-        ├── Theme.kt
-        └── Type.kt
+features/<feature-name>/
+├── api/                    # Публичный API модуля
+│   └── FeatureComponent.kt # Интерфейс компонента и @Composable экран
+└── internal/               # Приватная реализация
+    └── DefaultFeatureComponent.kt
 ```
 
-### Key Components
-- **MainActivity**: ComponentActivity with Compose setContent, uses edge-to-edge mode
-- **Theme System**: Custom theme under `ui.theme` package using Material 3
+### Single Activity Architecture
+- **MainActivity** - единственная Activity, точка входа
+- **Jetpack Compose** - 100% Compose UI (без XML layouts)
+- **Material 3** - компоненты Material Design 3
+- **Edge-to-Edge** - полноэкранный режим с поддержкой system bars
+
+### Convention Plugins (build-logic)
+Проект использует convention plugins для переиспользования конфигурации Gradle:
+- **aichallenge.android.application** - конфигурация для app модуля
+- **aichallenge.android.library** - конфигурация для library модулей
+- **aichallenge.android.compose** - конфигурация Compose
+- **ProjectConfig.kt** - централизованные настройки (SDK versions, Java version)
 
 ### Dependencies Management
-- Uses Gradle version catalogs (`gradle/libs.versions.toml`) for centralized dependency management
-- All library versions are defined in the catalog file
+- **Gradle Version Catalog** (`gradle/libs.versions.toml`) - централизованное управление зависимостями
+- Все версии библиотек определены в каталоге
+- Доступ к зависимостям через `libs.library.name`
 
 ### Build Configuration
 - **Java 21** target/source compatibility
 - **Kotlin JVM Target**: 21
-- **ProGuard**: Configured for release builds but minification is currently disabled
-- Uses latest Kotlin Compose compiler plugin (v2.0.21)
+- **Kotlin Serialization** включен для Decompose
+- **ProGuard**: настроен для release, но minification отключен
 
 ## Development Guidelines
 
+### Adding New Feature Module
+1. Создай новый модуль в `features/` директории
+2. Добавь модуль в `settings.gradle.kts`: `include(":features:feature-name")`
+3. Используй convention plugins в `build.gradle.kts`:
+   ```kotlin
+   plugins {
+       id("aichallenge.android.library")
+       id("aichallenge.android.compose")
+       alias(libs.plugins.kotlin.serialization)
+   }
+   ```
+4. Создай структуру `api/` и `internal/` пакетов
+5. Создай интерфейс компонента в `api/` с factory method
+6. Создай реализацию компонента в `internal/`
+7. Создай `@Composable` функцию экрана в `api/`
+
+### Adding Navigation to New Screen
+1. Добавь новый тип в `RootComponent.Config` sealed interface
+2. Добавь новый sealed class в `RootComponent.Child`
+3. Обнови функцию `child()` в `DefaultRootComponent`
+4. Обнови `Children` в `MainActivity` для обработки нового child
+5. Используй `StackNavigation.navigate()` для навигации к новому экрану
+
 ### When Adding New Composables
-- Place UI components in appropriate packages under `ui/`
-- Use Material 3 components from `androidx.compose.material3`
-- Follow the existing theme system in `ui.theme`
-- Add `@Preview` annotations for composables to enable preview in Android Studio
+- Размещай UI компоненты в соответствующих пакетах feature-модулей
+- Используй Material 3 компоненты из `androidx.compose.material3`
+- Следуй существующей теме в `app/ui/theme`
+- Добавляй `@Preview` аннотации для preview в Android Studio
 
 ### When Modifying Dependencies
-- Update version numbers in `gradle/libs.versions.toml`
-- Reference libraries using the version catalog in build files: `libs.library.name`
-
-### Testing Structure
-- **Unit tests**: `app/src/test/java/` - JUnit tests, no Android dependencies
-- **Instrumented tests**: `app/src/androidTest/java/` - tests requiring Android framework/device
-- Test runner: `androidx.test.runner.AndroidJUnitRunner`
+- Обновляй версии в `gradle/libs.versions.toml`
+- Ссылайся на библиотеки через version catalog: `libs.library.name`
+- Для общих зависимостей используй convention plugins в `build-logic`
 
 ### AI Assisted Guidelines
-
 * Ты должен общаться на русском языке
 * Разработка ведется на ОС Windows
+* Используй `gradlew.bat` вместо `./gradlew` для команд Gradle
+* Не оставляй НИКАКИХ комментариев в коде
